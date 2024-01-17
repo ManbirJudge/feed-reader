@@ -36,6 +36,12 @@ namespace FeedReader
             }
         }
 
+        public static DateTime StartOfWeek(DateTime dt, DayOfWeek firstDay = DayOfWeek.Monday)
+        {
+            int diff = (7 + (dt.DayOfWeek - firstDay)) % 7;
+            return dt.AddDays(-1 * diff).Date;
+        }
+
         public static string BoolToIntStr(bool b)
         {
             return b ? "1" : "0";

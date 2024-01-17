@@ -20,36 +20,65 @@
                     <PathIcon Data="M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v13.5a.5.5 0 0 1-.777.416L8 13.101l-5.223 2.815A.5.5 0 0 1 2 15.5V2zm2-1a1 1 0 0 0-1 1v12.566l4.723-2.482a.5.5 0 0 1 .554 0L13 14.566V2a1 1 0 0 0-1-1H4z"/>
                 </Button>
                 <TextBlock 
-                RelativePanel.RightOf="FeedEntryBookmarkBtn" 
-                RelativePanel.LeftOf="FeedEntryTimeTillReceivedBox" 
-                RelativePanel.AlignTopWithPanel="True" 
-                RelativePanel.AlignBottomWithPanel="True" 
-                Text="{x:Bind Title}" 
-                RelativePanel.AlignVerticalCenterWithPanel="True" 
-                HorizontalAlignment="Stretch"
-                HorizontalTextAlignment="Left" 
-                VerticalAlignment="Center" 
-                Margin="10,0,0,0"
-                TextTrimming="CharacterEllipsis"/>
+                    RelativePanel.RightOf="FeedEntryBookmarkBtn" 
+                    RelativePanel.LeftOf="FeedEntryTimeTillReceivedBox" 
+                    RelativePanel.AlignTopWithPanel="True" 
+                    RelativePanel.AlignBottomWithPanel="True" 
+                    Text="{x:Bind Title}" 
+                    RelativePanel.AlignVerticalCenterWithPanel="True" 
+                    HorizontalAlignment="Stretch"
+                    HorizontalTextAlignment="Left" 
+                    VerticalAlignment="Center" 
+                    Margin="10,0,0,0"
+                    TextTrimming="CharacterEllipsis"/>
                 <TextBlock 
-                x:Name="FeedEntryTimeTillReceivedBox" 
-                RelativePanel.LeftOf="FeedEntryCmdBar" 
-                RelativePanel.AlignTopWithPanel="True" 
-                RelativePanel.AlignBottomWithPanel="True" 
-                Text="{x:Bind GetTimeTillPublished()}" 
-                RelativePanel.AlignVerticalCenterWithPanel="True"
-                HorizontalTextAlignment="Left" 
-                VerticalAlignment="Center" 
-                Margin="0,0,10,0"
-                ToolTipService.ToolTip="{x:Bind GetPublishedAndReceivedStr()}"/>
+                    x:Name="FeedEntryTimeTillReceivedBox" 
+                    RelativePanel.LeftOf="FeedEntryCmdBar" 
+                    RelativePanel.AlignTopWithPanel="True" 
+                    RelativePanel.AlignBottomWithPanel="True" 
+                    Text="{x:Bind GetTimeTillPublished()}" 
+                    RelativePanel.AlignVerticalCenterWithPanel="True"
+                    HorizontalTextAlignment="Left" 
+                    VerticalAlignment="Center" 
+                    Margin="0,0,10,0"
+                    ToolTipService.ToolTip="{x:Bind GetPublishedAndReceivedStr()}"/>
                 <StackPanel Orientation="Horizontal" x:Name="FeedEntryCmdBar" Visibility="Collapsed" RelativePanel.AlignRightWithPanel="True" RelativePanel.AlignTopWithPanel="True" RelativePanel.AlignBottomWithPanel="True" Spacing="10">
-                    <Button>
-                        <SymbolIcon Symbol="Share"/>
-                    </Button>
-                    <Button>
+                    <muxc:DropDownButton x:Name="ItemShareBtn" ToolTipService.ToolTip="Share">
+                        <muxc:DropDownButton.Content>
+                            <SymbolIcon Symbol="Share"/>
+                        </muxc:DropDownButton.Content>
+                        <muxc:DropDownButton.Flyout>
+                            <MenuFlyout Placement="Bottom">
+                                <MenuFlyoutItem Click="ShareWhatsAppBtn_Click" Text="WhatsApp">
+                                    <MenuFlyoutItem.Icon>
+                                        <BitmapIcon UriSource="/Assets/whatsapp-icon.png"/>
+                                    </MenuFlyoutItem.Icon>
+                                </MenuFlyoutItem>
+                                <MenuFlyoutItem Text="Email" IsEnabled="False">
+                                    <MenuFlyoutItem.Icon>
+                                        <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE715;"/>
+                                    </MenuFlyoutItem.Icon>
+                                </MenuFlyoutItem>
+                                <MenuFlyoutItem Click="ShareTgBtn_Click" Text="Telegram">
+                                    <MenuFlyoutItem.Icon>
+                                        <BitmapIcon UriSource="/Assets/telegram-icon.png"/>
+                                    </MenuFlyoutItem.Icon>
+                                </MenuFlyoutItem>
+                                <MenuFlyoutItem Text="Facebook" IsEnabled="False"/>
+                                <MenuFlyoutItem Text="Instagram" IsEnabled="False"/>
+                                <MenuFlyoutItem Text="Snapchat" IsEnabled="False"/>
+                                <MenuFlyoutItem Text="Signal" IsEnabled="False"/>
+                                <MenuFlyoutItem Text="Skype" IsEnabled="False"/>
+                                <MenuFlyoutItem Text="X" IsEnabled="False"/>
+                                <MenuFlyoutItem Text="Reddit" IsEnabled="False"/>
+                            </MenuFlyout>
+                        </muxc:DropDownButton.Flyout>
+
+                    </muxc:DropDownButton>
+                    <Button x:Name="ItemMarkAsReadBtn" Click="ItemMarkAsReadBtn_Click" ToolTipService.ToolTip="Mark as Read">
                         <SymbolIcon Symbol="Accept"/>
                     </Button>
-                    <Button>
+                    <Button x:Name="ItemHideBtn" Click="ItemHideBtn_Click"  ToolTipService.ToolTip="Mark as Read &amp; Hide">
                         <SymbolIcon Symbol="Cancel"/>
                     </Button>
                 </StackPanel>
@@ -71,72 +100,114 @@
         PaneDisplayMode="Left"
         SelectedItem="AlFeedItem"
         IsSettingsVisible="False"
-        SelectionChanged="MainNavView_SelectionChanged" PaneTitle="Navigation">
-        <muxc:NavigationView.MenuItems>
-            <muxc:NavigationViewItem Content="Today" Tag="TodayFeed" Icon="Calendar"/>
-            <muxc:NavigationViewItemSeparator/>
-            <muxc:NavigationViewItemHeader Content="Feeds" />
-            <muxc:NavigationViewItem x:Name="AlFeedItem" Content="All" Tag="AllFeed" IsSelected="True" Icon="List"/>
-        </muxc:NavigationView.MenuItems>
+        ItemInvoked="MainNavView_ItemInvoked"
+        SelectionChanged="MainNavView_SelectionChanged">
         <muxc:NavigationView.FooterMenuItems>
-            <muxc:NavigationViewItem Content="Add Feed" Tag="AddFeed" >
+            <muxc:NavigationViewItem SelectsOnInvoked="False" Content="Add Feed" Tag="AddFeed">
                 <muxc:NavigationViewItem.Icon>
                     <PathIcon Data="M25.57 144.1C12.41 143.4 0.9117 153.2 0.0523 166.4C-0.8071 179.6 9.2253 191.05 22.4423 191.9C142.542 199.775 248.142 304.6 256.042 425.5C256.9 438.3 267.4 448 279.1 448C279.631 448 280.162 447.969 280.694 447.938C293.914 447.094 303.944 435.658 303.084 422.438C294.6 278.3 169.7 153.4 25.57 144.1ZM32 0C14.33 0 0 14.31 0 32C0 49.69 14.33 64 32 64C226.1 64 384 221.9 384 416C384 433.69 398.33 448 416 448C433.67 448 448 433.69 448 416C448 186.6 261.4 0 32 0ZM63.1 319.9C28.63 319.9 0 348.6 0 384C0 419.4 28.63 448 63.1 448C97.57 448 127.18 419.38 127.18 384C127.18 348.62 99.37 319.9 63.1 319.9Z"/>
                 </muxc:NavigationViewItem.Icon>
             </muxc:NavigationViewItem>
-            <muxc:NavigationViewItem Content="Help" Tag="Help" Icon="Help" />
-            <muxc:NavigationViewItem Content="Settings" Tag="Settings" Icon="Setting" />
+            <muxc:NavigationViewItem SelectsOnInvoked="False" Content="Help" Tag="Help" Icon="Help" />
+            <muxc:NavigationViewItem SelectsOnInvoked="False" Content="Settings" Tag="Settings" Icon="Setting">
+                <muxc:NavigationViewItem.ContextFlyout>
+                    <Flyout>
+                        <StackPanel Orientation="Vertical" Spacing="12">
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                <TextBlock Text="Theme" VerticalAlignment="Center"/>
+                                <ComboBox Width="200" SelectedIndex="0" IsEnabled="False">
+                                    <ComboBox.Items>
+                                        <ComboBoxItem Content="System"/>
+                                        <ComboBoxItem Content="Light"/>
+                                        <ComboBoxItem Content="Dark"/>
+                                    </ComboBox.Items>
+                                </ComboBox>
+                            </StackPanel>
+                        </StackPanel>
+                    </Flyout>
+                </muxc:NavigationViewItem.ContextFlyout>
+            </muxc:NavigationViewItem>
         </muxc:NavigationView.FooterMenuItems>
         <muxc:NavigationView.Content>
             <SplitView x:Name="MainSplitView" DisplayMode="Inline" PanePlacement="Right" OpenPaneLength="700" PaneBackground="{StaticResource ApplicationPageBackgroundThemeBrush}">
                 <SplitView.Pane>
-                    <RelativePanel Padding="16,6" BorderBrush="LightGray" BorderThickness="1,1,0,0">
-                        <TextBlock 
-                            x:Name="PaneTitleTxt"
-                            RelativePanel.AlignLeftWithPanel="True"
-                            RelativePanel.AlignRightWithPanel="True"
-                            RelativePanel.AlignTopWithPanel="True"
-                            FontWeight="ExtraBold"
-                            TextWrapping="Wrap"
-                            FontSize="28"/>
-                        <StackPanel 
-                            x:Name="PaneInfo"
-                            Orientation="Horizontal"
-                            RelativePanel.AlignLeftWithPanel="True"
-                            RelativePanel.Below="PaneTitleTxt"
-                            Spacing="5" Margin="0,5,0,0">
-                            <StackPanel.Resources>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="FontSize" Value="14"/>
-                                    <Setter Property="Foreground" Value="Gray"/>
-                                </Style>
-                            </StackPanel.Resources>
-                            <TextBlock x:Name="PaneInfoSrcTxt" Text="Source"/>
-                            <TextBlock Text="//"/>
-                            <TextBlock x:Name="PaneInfoPublishedTxt"/>
-                            <TextBlock Text="//"/>
-                            <TextBlock Text="Keep unread" IsTapEnabled="True"/>
-                            <TextBlock Text="//"/>
-                            <TextBlock Text="Hide" IsTapEnabled="True"/>
-                        </StackPanel>
-                        <TextBlock 
-                            x:Name="PaneSummaryTxt"
-                            d:Text="LOJDFj ldskfjsd lfdlsfjasdf lkdsjf;ldkjsf ;ladkj;lsdkjf ;asdjf;aldkjf sdzkja;ldkfj sdkfja;dlkjf;asd kjsa;dkfj ladkjsdfkdsfjads;fkljh dlk;fj da"
-                            TextWrapping="Wrap"
-                            RelativePanel.AlignLeftWithPanel="True"
-                            RelativePanel.AlignRightWithPanel="True"
-                            RelativePanel.Below="PaneInfo"
-                            FontSize="18" Margin="0,16,0,0"/>
-                    </RelativePanel>
+                    <FlipView 
+                        x:Name="PaneFlipView"
+                        ItemsSource="{x:Bind FeedEntries}"
+                        SelectionChanged="PaneFlipView_SelectionChanged">
+                        <FlipView.ItemTemplate>
+                            <DataTemplate x:DataType="l:FeedEntry">
+                                <RelativePanel Padding="16,6" MaxWidth="700">
+                                    <TextBlock 
+                                        x:Name="PaneTitleTxt"
+                                        RelativePanel.AlignLeftWithPanel="True"
+                                        RelativePanel.AlignRightWithPanel="True"
+                                        RelativePanel.AlignTopWithPanel="True"
+                                        FontWeight="ExtraBold"
+                                        Text="{x:Bind Title}"
+                                        TextWrapping="Wrap"
+                                        FontSize="28"/> 
+                                    <StackPanel 
+                                        x:Name="PaneInfo"
+                                        Orientation="Horizontal"
+                                        RelativePanel.AlignLeftWithPanel="True"
+                                        RelativePanel.Below="PaneTitleTxt"
+                                        Spacing="5" Margin="0,5,0,0">
+                                        <StackPanel.Resources>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="FontSize" Value="14"/>
+                                                <Setter Property="Foreground" Value="Gray"/>
+                                            </Style>
+                                        </StackPanel.Resources>
+                                        <TextBlock x:Name="PaneInfoSrcTxt" Text="Source"/>
+                                        <TextBlock Text="//"/>
+                                        <TextBlock x:Name="PaneInfoPublishedTxt" Text="{x:Bind Published.ToString()}"/>
+                                        <TextBlock Text="//"/>
+                                        <TextBlock x:Name="PaneInfoKeepUnreadBtn" Tapped="PaneInfoKeepUnreadBtn_Tapped" Text="Keep unread" IsTapEnabled="True"/>
+                                        <TextBlock Text="//"/>
+                                        <TextBlock x:Name="PaneInfoHideBtn" Tapped="PaneInfoHideBtn_Tapped" Text="Hide" IsTapEnabled="True"/>
+                                    </StackPanel>
+                                    <TextBlock 
+                                        x:Name="PaneSummaryTxt"
+                                        d:Text="{x:Bind Summary}"
+                                        TextWrapping="Wrap"
+                                        RelativePanel.AlignLeftWithPanel="True"
+                                        RelativePanel.AlignRightWithPanel="True"
+                                        RelativePanel.Below="PaneInfo"
+                                        FontSize="18" 
+                                        Margin="0,16,0,0"/>
+                                    <HyperlinkButton 
+                                        x:Name="PaneGoToWebBtn"
+                                        RelativePanel.AlignLeftWithPanel="True"
+                                        RelativePanel.Below="PaneSummaryTxt"
+                                        Margin="0,16,0,0"
+                                        Click="PaneGoToWebBtn_Click">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <TextBlock Text="Go to website"/>
+                                            <SymbolIcon Symbol="Go"/>
+                                        </StackPanel>
+                                    </HyperlinkButton>
+                                </RelativePanel>
+                            </DataTemplate>
+                        </FlipView.ItemTemplate>
+                    </FlipView>
                 </SplitView.Pane>
                 <RelativePanel x:Name="MainContent" Padding="50,10">
                     <CommandBar x:Name="MainMenuBar" RelativePanel.AlignTopWithPanel="True" RelativePanel.AlignLeftWithPanel="True" RelativePanel.AlignRightWithPanel="True">
                         <AppBarButton Icon="Accept" Label="Mark as Read">
                             <AppBarButton.Flyout>
                                 <MenuFlyout Placement="Bottom" ShowMode="TransientWithDismissOnPointerMoveAway">
-                                    <MenuFlyoutItem Text="All articles" Icon="Accept" />
-                                    <MenuFlyoutItem Text="Older than a day" />
-                                    <MenuFlyoutItem Text="Older than a week" />
+                                    <MenuFlyoutItem x:Name="MarkAllAsReadBtn" Click="MarkAllAsReadBtn_Click" Text="All" Icon="Accept" />
+                                    <MenuFlyoutItem x:Name="MarkOlderThanDayAsReadBtn" Click="MarkOlderThanDayAsReadBtn_Click" Text="Older than a day" >
+                                        <MenuFlyoutItem.Icon>
+                                            <BitmapIcon UriSource="/Assets/plus-1-day.png" />
+                                        </MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
+                                    <MenuFlyoutItem x:Name="MarkOlderThanWeekAsReadBtn" Click="MarkOlderThanWeekAsReadBtn_Click" Text="Older than a week">
+                                        <MenuFlyoutItem.Icon>
+                                            <BitmapIcon UriSource="/Assets/plus-1-week.png" />
+                                        </MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
                                 </MenuFlyout>
                             </AppBarButton.Flyout>
                         </AppBarButton>
@@ -158,23 +229,23 @@
                                 </MenuFlyout>
                             </AppBarButton.Flyout>
                         </AppBarButton>
-                        <AppBarButton Icon="Refresh" Label="Refresh" Click="RefreshFeed"/>
+                        <AppBarButton x:Name="RefreshFeedBtn" Icon="Refresh" Label="Refresh" Click="RefreshFeed"/>
 
                         <CommandBar.SecondaryCommands>
                             <AppBarToggleButton x:Name="ShowReadBtn" Click="ShowReadBtn_Click" IsChecked="{x:Bind IncludeRead, Mode=OneWay}"  Label="Include Read"/>
-                                <AppBarToggleButton x:Name="ShowHiddenBtn" Click="ShowHiddenBtn_Click" IsChecked="{x:Bind IncludeHidden, Mode=OneWay}" Label="Include Hidden"/>
+                            <AppBarToggleButton x:Name="ShowHiddenBtn" Click="ShowHiddenBtn_Click" IsChecked="{x:Bind IncludeHidden, Mode=OneWay}" Label="Include Hidden"/>
                             <AppBarSeparator/>
-                                <AppBarButton x:Name="RenameBtn" Click="RenameBtn_Click" Label="Rename" Icon="Rename">
-                                    <AppBarButton.KeyboardAccelerators>
-                                        <KeyboardAccelerator Key="F2"/>
-                                    </AppBarButton.KeyboardAccelerators>
-                                </AppBarButton>
+                            <AppBarButton x:Name="RenameBtn" Click="RenameBtn_Click" Label="Rename" Icon="Rename">
+                                <AppBarButton.KeyboardAccelerators>
+                                    <KeyboardAccelerator Key="F2"/>
+                                </AppBarButton.KeyboardAccelerators>
+                            </AppBarButton>
                             <AppBarSeparator/>
-                                <AppBarButton x:Name="DeleteBtn" Click="DeleteBtn_Click" Label="Delete" Icon="Delete">
-                                    <AppBarButton.KeyboardAccelerators>
-                                        <KeyboardAccelerator Key="Delete"/>
-                                    </AppBarButton.KeyboardAccelerators>
-                                </AppBarButton>
+                            <AppBarButton x:Name="DeleteBtn" Click="DeleteBtn_Click" Label="Delete" Icon="Delete">
+                                <AppBarButton.KeyboardAccelerators>
+                                    <KeyboardAccelerator Key="Delete"/>
+                                </AppBarButton.KeyboardAccelerators>
+                            </AppBarButton>
                         </CommandBar.SecondaryCommands>
                     </CommandBar>
                     <ListView 
@@ -184,10 +255,9 @@
                         RelativePanel.AlignBottomWithPanel="True"
                         RelativePanel.Below="MainMenuBar"
                         SelectionMode="Single"
-                        IsItemClickEnabled="False"
-                        SelectionChanged="FeedEntriesListView_SelectionChanged"
                         ItemsSource="{x:Bind FeedEntries}"
-                        ItemTemplate="{StaticResource ItemStyleListTemplate}"/>
+                        ItemTemplate="{StaticResource ItemStyleListTemplate}" 
+                        SelectionChanged="FeedEntriesListView_SelectionChanged"/>
                 </RelativePanel>
             </SplitView>
         </muxc:NavigationView.Content>

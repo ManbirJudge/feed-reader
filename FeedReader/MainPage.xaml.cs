@@ -1,28 +1,29 @@
-﻿using System;
-using Windows.UI.Popups;
+﻿using Microsoft.Data.Sqlite;
 using Microsoft.UI.Xaml.Controls;
-using System.Collections.ObjectModel;
-using Windows.UI.Xaml.Input;
-using Windows.Storage;
-using Windows.UI.Xaml.Navigation;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using System.Linq;
 using Newtonsoft.Json.Schema;
-using System.Net;
-using Windows.Web.Syndication;
+using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
-using System.IO;
-using Microsoft.Data.Sqlite;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Net;
+using System.Threading.Tasks;
+using Windows.Storage;
+using Windows.System;
+using Windows.UI.Popups;
 using Windows.UI.Xaml;
+using Windows.UI.Xaml.Input;
+using Windows.UI.Xaml.Navigation;
+using Windows.Web.Syndication;
 
 namespace FeedReader
 {
     public class Settings
     {
-
+        string Theme { get; set; }
     }
 
     public class FeedFolder
@@ -47,6 +48,7 @@ namespace FeedReader
         public string Copyright { get; set; }
         public string Language { get; set; }
         public string IconUrl { get; set; }
+        public string ImgUrl { get; set; }
 
         public string FolderId { get; set; }
 
@@ -84,6 +86,7 @@ namespace FeedReader
             }
             newFeed.Language = feed.Language;
             newFeed.IconUrl = "http://www.google.com/s2/favicons?domain=" + newFeed.Link;
+            newFeed.ImgUrl = feed.ImageUri.ToString();
 
             return newFeed;
         }
@@ -110,10 +113,10 @@ namespace FeedReader
         {
             FeedEntry newFeedEntry = new()
             {
-                Id = item.Id != null ? item.Id : item.Links[0].ToString(),
+                Id = item.Id ?? item.Links[0].Uri.ToString(),
                 Title = item.Title.Text,
                 Summary = item.Summary != null ? item.Summary.Text : "",
-                Link = item.Links[0].ToString(),
+                Link = item.Links[0].Uri.ToString(),
                 Published = item.PublishedDate.UtcDateTime,
                 Links = new string[item.Links.Count],
                 Authors = new string[item.Authors.Count],
@@ -126,7 +129,7 @@ namespace FeedReader
 
             foreach (var link in item.Links)
             {
-                newFeedEntry.Links.Append(link.ToString());
+                newFeedEntry.Links.Append(link.Uri.ToString());
             }
             foreach (var author in item.Authors)
             {
@@ -146,7 +149,7 @@ namespace FeedReader
             {
                 Id = Guid.NewGuid().ToString(),
                 Title = "Title",
-                Summary = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Fusce interdum tortor quis metus aliquam, eget vehicula felis iaculis. Curabitur in ante bibendum, finibus ex a, venenatis libero. In vel neque.",
+                Summary = "Summary should be here.",
                 Link = "https://www.google.com",
                 Published = DateTime.Now,
                 Links = new string[0],
@@ -251,7 +254,7 @@ namespace FeedReader
             cmd = "CREATE TABLE IF NOT EXISTS FeedFolder (Id TEXT PRIMARY KEY, Title TEXT);";
             new SqliteCommand(cmd, conn).ExecuteNonQuery();
 
-            cmd = "CREATE TABLE IF NOT EXISTS Feed (Id TEXT PRIMARY KEY, Url TEXT, Title TEXT, Link TEXT, Description TEXT, LastUpdated NUMERIC, Copyright TEXT, Language TEXT, IconUrl TEXT, FolderId, FOREIGN KEY(FolderId) REFERENCES FeedFolder(Id) ON DELETE CASCADE);";
+            cmd = "CREATE TABLE IF NOT EXISTS Feed (Id TEXT PRIMARY KEY, Url TEXT, Title TEXT, Link TEXT, Description TEXT, LastUpdated NUMERIC, Copyright TEXT, Language TEXT, IconUrl TEXT, ImgUrl TEXT, FolderId, FOREIGN KEY(FolderId) REFERENCES FeedFolder(Id) ON DELETE CASCADE);";
             new SqliteCommand(cmd, conn).ExecuteNonQuery();
 
             cmd = "CREATE TABLE IF NOT EXISTS FeedEntry (Id TEXT PRIMARY KEY, Title TEXT, Summary TEXT, Link TEXT, Published NUMERIC, Received NUMERIC, Read BOOL, Hidden BOOL, FeedId TEXT, FOREIGN KEY(FeedId) REFERENCES Feed(Id) ON DELETE CASCADE);";
@@ -393,7 +396,7 @@ namespace FeedReader
             SqliteCommand cmd = new()
             {
                 Connection = conn,
-                CommandText = "INSERT INTO Feed VALUES ($Id, $Url, $Title, $Link, $Description, $LastUpdated, $Copyright, $Language, $IconUrl, $FolderId);"
+                CommandText = "INSERT INTO Feed VALUES ($Id, $Url, $Title, $Link, $Description, $LastUpdated, $Copyright, $Language, $IconUrl, $ImgUrl, $FolderId);"
             };
 
             cmd.Parameters.AddWithValue("$Id", feed.Id);
@@ -405,6 +408,7 @@ namespace FeedReader
             cmd.Parameters.AddWithValue("$Copyright", feed.Copyright);
             cmd.Parameters.AddWithValue("$Language", feed.Language);
             cmd.Parameters.AddWithValue("$IconUrl", feed.IconUrl);
+            cmd.Parameters.AddWithValue("$ImgUrl", feed.ImgUrl);
             cmd.Parameters.AddWithValue("$FolderId", feedFolder.Id);
 
             cmd.ExecuteNonQuery();
@@ -439,7 +443,8 @@ namespace FeedReader
                     Copyright = query.GetString(6),
                     Language = query.GetString(7),
                     IconUrl = query.GetString(8),
-                    FolderId = query.GetString(9)
+                    ImgUrl = query.GetString(9),
+                    FolderId = query.GetString(10)
                 });
             }
 
@@ -475,6 +480,7 @@ namespace FeedReader
                     Copyright = query.GetString(6),
                     Language = query.GetString(7),
                     IconUrl = query.GetString(8),
+                    ImgUrl = query.GetString(9),
                     FolderId = feedFolder.Id,
                 });
             }
@@ -492,7 +498,7 @@ namespace FeedReader
             SqliteCommand cmd = new()
             {
                 Connection = conn,
-                CommandText = $"UPDATE Feed SET Title = \"{feed.Title}\", Link = \"{feed.Link}\", Description = \"{feed.Description}\", LastUpdated = \"{Utils.DateTimeToTimestamp(feed.LastUpdated, true)}\", Language = \"{feed.Language}\", Copyright = \"{feed.Copyright}\", IconUrl = \"{feed.IconUrl}\" WHERE Id = \"{feed.Id}\";"
+                CommandText = $"UPDATE Feed SET Title = \"{feed.Title}\", Link = \"{feed.Link}\", Description = \"{feed.Description}\", LastUpdated = \"{Utils.DateTimeToTimestamp(feed.LastUpdated, true)}\", Language = \"{feed.Language}\", Copyright = \"{feed.Copyright}\", IconUrl = \"{feed.IconUrl}\", ImgUrl = \"{feed.ImgUrl}\" WHERE Id = \"{feed.Id}\";"
             };
 
             cmd.ExecuteNonQuery();
@@ -540,10 +546,11 @@ namespace FeedReader
 
             using var transaction = conn.BeginTransaction();
 
+            // TODO: fix bug
             SqliteCommand cmd = new()
             {
                 Connection = conn,
-                CommandText = "INSERT INTO FeedEntry (Id, Title, Summary, Link, Published, Received, Read, Hidden, FeedId)\r\nVALUES ($Id, $Title, $Summary, $Link, $Published, $Received, $Read, $Hidden, $FeedId)\r\nON CONFLICT (Id) DO UPDATE SET Title = EXCLUDED.Title, Summary = EXCLUDED.Summary, Link = EXCLUDED.Link, Published = EXCLUDED.Published, Received = EXCLUDED.Received, FeedId = EXCLUDED.FeedId;\r\n",
+                CommandText = "INSERT INTO FeedEntry (Id, Title, Summary, Link, Published, Received, Read, Hidden, FeedId) VALUES ($Id, $Title, $Summary, $Link, $Published, $Received, $Read, $Hidden, $FeedId) ON CONFLICT (Id) DO UPDATE SET Title = EXCLUDED.Title, Summary = EXCLUDED.Summary, Link = EXCLUDED.Link, Published = EXCLUDED.Published, Received = EXCLUDED.Received, FeedId = EXCLUDED.FeedId;",
                 Transaction = transaction
             };
 
@@ -612,8 +619,6 @@ namespace FeedReader
             }
             ndny = ndny.Substring(3);
 
-            Debug.WriteLine(ndny);
-
             string dbPath = Path.Combine(ApplicationData.Current.LocalFolder.Path, DbFileName);
 
             using SqliteConnection conn = new($"Filename={dbPath}");
@@ -625,8 +630,6 @@ namespace FeedReader
                 CommandText = $"SELECT * FROM FeedEntry WHERE " + ndny + (includeRead ? "" : $" AND Read = 0") + (includeHidden ? "" : $" AND Hidden = 0") + " ORDER BY Published " + (sortPublishedLatest ? "DESC" : "ASC")
             };
             var query = cmd.ExecuteReader();
-
-            Debug.WriteLine(cmd.CommandText);
 
             while (query.Read())
             {
@@ -663,8 +666,6 @@ namespace FeedReader
             };
             var query = cmd.ExecuteReader();
 
-            Debug.WriteLine(cmd.CommandText);
-
             while (query.Read())
             {
                 feedEntries.Add(new FeedEntry()
@@ -699,8 +700,6 @@ namespace FeedReader
                 CommandText = $"SELECT * FROM FeedEntry WHERE Published >= {Utils.DateTimeToTimestamp(DateTime.Today, true)}" + (includeRead ? "" : $" AND Read = 0") + (includeHidden ? "" : $" AND Hidden = 0") + " ORDER BY Published " + (sortPublishedLatest ? "DESC" : "ASC")
             };
             var query = cmd.ExecuteReader();
-
-            Debug.WriteLine(cmd.CommandText);
 
             while (query.Read())
             {
@@ -737,8 +736,6 @@ namespace FeedReader
             };
             var query = cmd.ExecuteReader();
 
-            Debug.WriteLine(cmd.CommandText);
-
             while (query.Read())
             {
                 feedEntries.Add(new FeedEntry()
@@ -773,6 +770,75 @@ namespace FeedReader
 
             cmd.ExecuteNonQuery();
         }
+
+        public static void MarkFeedEntryAsRead(FeedEntry feedEntry)
+        {
+            string dbPath = Path.Combine(ApplicationData.Current.LocalFolder.Path, DbFileName);
+
+            using SqliteConnection conn = new($"Filename={dbPath}");
+            conn.Open();
+
+            SqliteCommand cmd = new()
+            {
+                Connection = conn,
+                CommandText = $"UPDATE FeedEntry SET Read = 1 WHERE Id = \"{feedEntry.Id}\";"
+            };
+
+            cmd.ExecuteNonQuery();
+        }
+
+        public static void MarkFeedEntryAsUnread(FeedEntry feedEntry)
+        {
+            string dbPath = Path.Combine(ApplicationData.Current.LocalFolder.Path, DbFileName);
+
+            using SqliteConnection conn = new($"Filename={dbPath}");
+            conn.Open();
+
+            SqliteCommand cmd = new()
+            {
+                Connection = conn,
+                CommandText = $"UPDATE FeedEntry SET Read = 0 WHERE Id = \"{feedEntry.Id}\";"
+            };
+
+            cmd.ExecuteNonQuery();
+        }
+
+        public static void MarkFeedEntriesAsReadBefore(DateTime datetime)
+        {
+            string dbPath = Path.Combine(ApplicationData.Current.LocalFolder.Path, DbFileName);
+
+            using SqliteConnection conn = new($"Filename={dbPath}");
+            conn.Open();
+
+            SqliteCommand cmd = new()
+            {
+                Connection = conn,
+                CommandText = $"UPDATE FeedEntry SET Read = 1 WHERE Published < {Utils.DateTimeToTimestamp(datetime, true)};"
+            };
+
+            cmd.ExecuteNonQuery();
+        }
+
+        public static void HideFeedEntry(FeedEntry feedEntry)
+        {
+            if (!feedEntry.Read)
+            {
+                throw new Exception("The entry must be marked as read before hiding");
+            }
+
+            string dbPath = Path.Combine(ApplicationData.Current.LocalFolder.Path, DbFileName);
+
+            using SqliteConnection conn = new($"Filename={dbPath}");
+            conn.Open();
+
+            SqliteCommand cmd = new()
+            {
+                Connection = conn,
+                CommandText = $"UPDATE FeedEntry SET Read = 1, Hidden = 1 WHERE Id = \"{feedEntry.Id}\";"
+            };
+
+            cmd.ExecuteNonQuery();
+        }
     }
 
     public sealed partial class MainPage : Windows.UI.Xaml.Controls.Page
@@ -789,7 +855,7 @@ namespace FeedReader
 
         private readonly ObservableCollection<FeedEntry> FeedEntries = new();
 
-        private FeedEntry CurrFeedEntry { get; set; }
+        private int SelectedFeedEntryI { get; set; } = 1;
 
         public MainPage()
         {
@@ -798,8 +864,6 @@ namespace FeedReader
             Debug.WriteLine("Local folder path: " + LocalFolder.Path);
 
             DataAccess.InitDb();
-
-            CurrFeedEntry = FeedEntry.Dummy();
         }
 
         protected override async void OnNavigatedTo(NavigationEventArgs e)
@@ -867,7 +931,7 @@ namespace FeedReader
                 MainNavView.MenuItems.Add(feedFolderItem);
             }
 
-            MainNavView.MenuItems.Add(new NavigationViewItem() { Content = "New Folder", Tag = "CreateNewFolder", Icon = new Windows.UI.Xaml.Controls.SymbolIcon(Windows.UI.Xaml.Controls.Symbol.NewFolder) });
+            MainNavView.MenuItems.Add(new NavigationViewItem() { Content = "New Folder", Tag = "CreateNewFolder", SelectsOnInvoked = false, Icon = new Windows.UI.Xaml.Controls.SymbolIcon(Windows.UI.Xaml.Controls.Symbol.NewFolder) });
 
             MainNavView.SelectedItem = todaysFeedItem;
         }
@@ -886,6 +950,7 @@ namespace FeedReader
                 MainNavView.Header = "Today's Feed";
                 RenameBtn.IsEnabled = false;
                 DeleteBtn.IsEnabled = false;
+                RefreshFeedBtn.IsEnabled = false;
             }
             else if (selectedFeedIdStr == "AllFeed")
             {
@@ -894,6 +959,7 @@ namespace FeedReader
                 MainNavView.Header = "All Feed";
                 RenameBtn.IsEnabled = false;
                 DeleteBtn.IsEnabled = false;
+                RefreshFeedBtn.IsEnabled = true;
             }
             else if (selectedFeedIdStr.StartsWith("Folder"))
             {
@@ -905,6 +971,7 @@ namespace FeedReader
                 MainNavView.Header = selectedFeedFolder.Title;
                 RenameBtn.IsEnabled = true;
                 DeleteBtn.IsEnabled = true;
+                RefreshFeedBtn.IsEnabled = true;
             }
             else
             {
@@ -916,33 +983,32 @@ namespace FeedReader
                 MainNavView.Header = selectedFeed.Title;
                 RenameBtn.IsEnabled = true;
                 DeleteBtn.IsEnabled = true;
+                RefreshFeedBtn.IsEnabled = true;
             }
 
         }
 
-        private void RefreshFeed(object sender, Windows.UI.Xaml.RoutedEventArgs e)
+        private void RefreshFeed(object sender, RoutedEventArgs e)
         {
-            FeedEntries.Clear();
-            List<FeedEntry> newFeedEntries = new();
+            var selectedIdStr = (MainNavView.SelectedItem as NavigationViewItem).Tag.ToString();
 
-            var selectedFeedIdStr = (MainNavView.SelectedItem as NavigationViewItem).Tag.ToString();
+            if (selectedIdStr == "TodayFeed")
+            {
 
-            if (selectedFeedIdStr == "TodayFeed")
-            {
-                MainNavView.Header = "Today's Feed";
             }
-            else if (selectedFeedIdStr == "AllFeed")
+            else if (selectedIdStr == "AllFeed")
             {
-                MainNavView.Header = "All Feed";
+
             }
-            else if (selectedFeedIdStr.StartsWith("Folder"))
+            else if (selectedIdStr.StartsWith("Folder"))
             {
-                var selectedFeedFolderId = selectedFeedIdStr.Replace("Folder", "");
-                var selectedFeedFolder = DataAccess.GetFeedFolder(selectedFeedIdStr);
+                var selectedFeedFolderId = selectedIdStr.Replace("Folder", "");
+                var selectedFeedFolder = DataAccess.GetFeedFolder(selectedFeedFolderId);
 
                 foreach (var feed in DataAccess.GetFeeds(selectedFeedFolder))
                 {
                     SyndicationFeed feed_ = new();
+                    List<FeedEntry> thisFeedsEntries = new();
 
                     using (WebClient client = new())
                     {
@@ -952,16 +1018,18 @@ namespace FeedReader
 
                     foreach (var entry in feed_.Items)
                     {
-                        newFeedEntries.Add(FeedEntry.New(entry, feed.Id));
+                        thisFeedsEntries.Add(FeedEntry.New(entry, feed.Id));
                     }
-                }
 
-                MainNavView.Header = selectedFeedFolder.Title;
+                    DataAccess.AddFeedEntries(thisFeedsEntries, feed);
+                }
             }
             else
             {
-                var selectedFeedId = selectedFeedIdStr;
+                var selectedFeedId = selectedIdStr;
                 var selectedFeed = DataAccess.GetFeed(selectedFeedId);
+
+                List<FeedEntry> thisFeedsEntries = new();
 
                 SyndicationFeed feed_ = new();
 
@@ -973,27 +1041,13 @@ namespace FeedReader
 
                 foreach (var entry in feed_.Items)
                 {
-                    newFeedEntries.Add(FeedEntry.New(entry, selectedFeedId));
+                    thisFeedsEntries.Add(FeedEntry.New(entry, selectedFeedId));
                 }
 
-                DataAccess.AddFeedEntries(newFeedEntries, selectedFeed);
-
-                MainNavView.Header = selectedFeed.Title;
+                DataAccess.AddFeedEntries(thisFeedsEntries, selectedFeed);
             }
 
-            if (SortPublishedLatest)
-            {
-                foreach (var newFeedEntry in newFeedEntries.OrderByDescending(x => x.Published.Ticks))
-                {
-                    FeedEntries.Add(newFeedEntry);
-                }
-            } else
-            {
-                foreach (var newFeedEntry in newFeedEntries.OrderBy(x => x.Published.Ticks))
-                {
-                    FeedEntries.Add(newFeedEntry);
-                }
-            }
+            LoadFeed();
         }
 
         private void FeedEntry_PointerEntered(object sender_, PointerRoutedEventArgs args)
@@ -1001,7 +1055,7 @@ namespace FeedReader
             var sender = (Windows.UI.Xaml.Controls.RelativePanel)sender_;
 
             var cmdBar = (Windows.UI.Xaml.Controls.StackPanel)sender.FindName("FeedEntryCmdBar");
-            cmdBar.Visibility = Windows.UI.Xaml.Visibility.Visible;
+            cmdBar.Visibility = Visibility.Visible;
         }
 
         private void FeedEntry_PointerExited(object sender_, PointerRoutedEventArgs args)
@@ -1009,67 +1063,71 @@ namespace FeedReader
             var sender = (Windows.UI.Xaml.Controls.RelativePanel)sender_;
 
             var cmdBar = (Windows.UI.Xaml.Controls.StackPanel)sender.FindName("FeedEntryCmdBar");
-            cmdBar.Visibility = Windows.UI.Xaml.Visibility.Collapsed;
+            cmdBar.Visibility = Visibility.Collapsed;
         }
 
-        private async void MainNavView_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
+        private void MainNavView_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
         {
             if (args.SelectedItem is NavigationViewItem)
             {
-                var selectedItem = args.SelectedItem as NavigationViewItem;
-
-                switch (selectedItem.Tag.ToString())
-                {
-                    case "AddFeed":
-                        var dialog = new AddFeedDialog(DataAccess.GetFeedFolders());
-                        var result = await dialog.ShowAsync();
-
-                        if (result == Windows.UI.Xaml.Controls.ContentDialogResult.Primary)
-                        {
-                            var newFeed = Feed.New(dialog.FeedUrl);
-
-                            DataAccess.AddFeed(newFeed, DataAccess.GetFeedFolders()[dialog.GetSelectedFolderIndex()]);
-
-                            LoadMainNav();
-                        }
-
-                        break;
-
-                    case "CreateNewFolder":
-                        var dialog1 = new CreateNewFolderDialog();
-                        var result1 = await dialog1.ShowAsync();
-
-                        if (result1 == Windows.UI.Xaml.Controls.ContentDialogResult.Primary)
-                        {
-                            DataAccess.AddFeedFolder(FeedFolder.New(dialog1.FolderName));
-
-                            LoadMainNav();
-                        }
-
-                        break;
-
-                    case "Settings":
-                        await new MessageDialog("Settings not implemented yet.", "Error").ShowAsync();
-                        break;
-
-                    case "Help":
-                        await Windows.System.Launcher.LaunchUriAsync(new Uri("https://github.com/ManbirJudge"));
-                        break;
-
-                    default:
-                        LoadFeed();
-                        break;
-                }
+                LoadFeed();
             }
         }
 
-        private void SortLatest(object sender, Windows.UI.Xaml.RoutedEventArgs e)
+        private async void MainNavView_ItemInvoked(NavigationView sender, NavigationViewItemInvokedEventArgs args)
+        {
+            var invokedItem = args.InvokedItemContainer as NavigationViewItem;
+
+            if (invokedItem == null)
+            {
+                Debug.WriteLine("INVOEKD ITEM NULLLLLLLLLLLLLLLLLL");
+                return;
+            }
+
+            var invokedItemTag = invokedItem.Tag.ToString();
+
+            if (invokedItemTag == "AddFeed")
+            {
+                var dialog = new AddFeedDialog(DataAccess.GetFeedFolders());
+                var result = await dialog.ShowAsync();
+
+                if (result == Windows.UI.Xaml.Controls.ContentDialogResult.Primary)
+                {
+                    var newFeed = Feed.New(dialog.FeedUrl);
+
+                    DataAccess.AddFeed(newFeed, DataAccess.GetFeedFolders()[dialog.GetSelectedFolderIndex()]);
+
+                    LoadMainNav();
+                }
+            } else if(invokedItemTag == "CreateNewFolder")
+            {
+                var dialog = new CreateNewFolderDialog();
+                var result = await dialog.ShowAsync();
+
+                if (result == Windows.UI.Xaml.Controls.ContentDialogResult.Primary)
+                {
+                    DataAccess.AddFeedFolder(FeedFolder.New(dialog.FolderName));
+
+                    LoadMainNav();
+                }
+            }
+            else if (invokedItemTag == "Help")
+            {
+                await Launcher.LaunchUriAsync(new Uri("https://github.com/ManbirJudge"));
+            }
+            else if (invokedItemTag == "Settings")
+            {
+                invokedItem.ContextFlyout.ShowAt(invokedItem);
+            }
+        }
+
+        private void SortLatest(object sender, RoutedEventArgs e)
         {
             SortPublishedLatest = true;
             LoadFeed();
         }
 
-        private void SortOldest(object sender, Windows.UI.Xaml.RoutedEventArgs e)
+        private void SortOldest(object sender, RoutedEventArgs e)
         {
             SortPublishedLatest = false;
             LoadFeed();
@@ -1077,27 +1135,17 @@ namespace FeedReader
 
         private void UpdateListViewStyle()
         {
-            switch (ViewStyle)
+            FeedEntriesListView.ItemTemplate = ViewStyle switch
             {
-                case "List":
-                    FeedEntriesListView.ItemTemplate = Resources["ItemStyleListTemplate"] as DataTemplate;
-                    break;
-                case "Magazine":
-                    FeedEntriesListView.ItemTemplate = Resources["ItemStyleMagazineTemplate"] as DataTemplate;
-                    break;
-                case "Cards":
-                    FeedEntriesListView.ItemTemplate = Resources["ItemStyleCardTemplate"] as DataTemplate;
-                    break;
-                case "Article":
-                    FeedEntriesListView.ItemTemplate = Resources["ItemStyleArticleTemplate"] as DataTemplate;
-                    break;
-                default:
-                    FeedEntriesListView.ItemTemplate = null;
-                    break;
-            }
+                "List" => Resources["ItemStyleListTemplate"] as DataTemplate,
+                "Magazine" => Resources["ItemStyleMagazineTemplate"] as DataTemplate,
+                "Cards" => Resources["ItemStyleCardTemplate"] as DataTemplate,
+                "Article" => Resources["ItemStyleArticleTemplate"] as DataTemplate,
+                _ => null,
+            };
         }
 
-        private void OnUpdateListViewType(object sender_, Windows.UI.Xaml.RoutedEventArgs e)
+        private void OnUpdateListViewType(object sender_, RoutedEventArgs e)
         {
             var sender = sender_ as RadioMenuFlyoutItem;
             ViewStyle = sender.Tag.ToString();
@@ -1105,9 +1153,9 @@ namespace FeedReader
             UpdateListViewStyle();
         }
 
-        private void FeedEntriesListView_SelectionChanged(object sender, Windows.UI.Xaml.Controls.SelectionChangedEventArgs e)
+        private void SelectedFeedChanged()
         {
-            if (FeedEntriesListView.SelectedIndex < 0)
+            if (SelectedFeedEntryI < 0)
             {
                 MainSplitView.IsPaneOpen = false;
                 MainContent.Padding = new Thickness(50, 10, 50, 10);
@@ -1115,17 +1163,28 @@ namespace FeedReader
                 return;
             }
 
-            CurrFeedEntry = FeedEntries[FeedEntriesListView.SelectedIndex];
-
-            CurrFeedEntry.Read = true;
-            DataAccess.UpdateFeedEntry(CurrFeedEntry);
-
-            PaneTitleTxt.Text = CurrFeedEntry.Title;
-            PaneInfoPublishedTxt.Text = CurrFeedEntry.Published.ToString();
-            PaneSummaryTxt.Text = CurrFeedEntry.Summary;
+            var notDecidedYet = FeedEntries[SelectedFeedEntryI];
+            notDecidedYet.Read = true;
+            DataAccess.UpdateFeedEntry(notDecidedYet);
 
             MainSplitView.IsPaneOpen = true;
             MainContent.Padding = new Thickness(50, 10, 0, 10);
+        }
+
+        private void FeedEntriesListView_SelectionChanged(object sender, Windows.UI.Xaml.Controls.SelectionChangedEventArgs e)
+        {
+            SelectedFeedEntryI = FeedEntriesListView.SelectedIndex;
+            PaneFlipView.SelectedIndex = SelectedFeedEntryI;
+
+            SelectedFeedChanged();
+        }
+
+        private void PaneFlipView_SelectionChanged(object sender, Windows.UI.Xaml.Controls.SelectionChangedEventArgs e)
+        {
+            SelectedFeedEntryI = PaneFlipView.SelectedIndex;
+            FeedEntriesListView.SelectedIndex = SelectedFeedEntryI;
+
+            SelectedFeedChanged();
         }
 
         private async void RenameBtn_Click(object sender, RoutedEventArgs e)
@@ -1179,7 +1238,7 @@ namespace FeedReader
 
             void DeleteCanceled(IUICommand command)
             {
-                Debug.WriteLine("Just a note. The user cancelled deletion.");
+
             }
 
             var dialog = new MessageDialog("Are you sure you want to delete the feed/feed folder?", "Confirmation");
@@ -1209,6 +1268,77 @@ namespace FeedReader
         {
             IncludeHidden = !IncludeHidden;
             LoadFeed();
+        }
+
+        private void MarkAllAsReadBtn_Click(object sender, RoutedEventArgs e)
+        {
+            DataAccess.MarkFeedEntriesAsReadBefore(DateTime.Now);
+            LoadFeed();
+        }
+
+        private void MarkOlderThanDayAsReadBtn_Click(object sender, RoutedEventArgs e)
+        {
+            DataAccess.MarkFeedEntriesAsReadBefore(DateTime.Today);
+            LoadFeed();
+        }
+
+        private void MarkOlderThanWeekAsReadBtn_Click(object sender, RoutedEventArgs e)
+        {
+            DataAccess.MarkFeedEntriesAsReadBefore(Utils.StartOfWeek(DateTime.Now));
+            LoadFeed();
+        }
+
+        private void ItemMarkAsReadBtn_Click(object sender, RoutedEventArgs e)
+        {
+            Windows.UI.Xaml.Controls.Button itemShareBtn = sender as Windows.UI.Xaml.Controls.Button;
+            var item = itemShareBtn.DataContext as FeedEntry;
+
+            if (!IncludeRead)
+            {
+                FeedEntries.Remove(item);
+            }
+
+            DataAccess.MarkFeedEntryAsRead(item);
+        }
+
+        private void ItemHideBtn_Click(object sender, RoutedEventArgs e)
+        {
+            Windows.UI.Xaml.Controls.Button itemShareBtn = sender as Windows.UI.Xaml.Controls.Button;
+            var item = itemShareBtn.DataContext as FeedEntry;
+
+            if (!IncludeHidden)
+            {
+                FeedEntries.Remove(item);
+            };
+
+            DataAccess.HideFeedEntry(item);
+        }
+
+        private async void PaneGoToWebBtn_Click(object sender, RoutedEventArgs e)
+        {
+            await Windows.System.Launcher.LaunchUriAsync(new Uri(FeedEntries[SelectedFeedEntryI].Link));
+        }
+
+        private void PaneInfoKeepUnreadBtn_Tapped(object sender, TappedRoutedEventArgs e)
+        {
+            DataAccess.MarkFeedEntryAsUnread(FeedEntries[SelectedFeedEntryI]);
+            FeedEntries[SelectedFeedEntryI].Read = false;
+        }
+
+        private void PaneInfoHideBtn_Tapped(object sender, TappedRoutedEventArgs e)
+        {
+            DataAccess.HideFeedEntry(FeedEntries[SelectedFeedEntryI]);
+            FeedEntries.RemoveAt(SelectedFeedEntryI);
+        }
+
+        private async void ShareWhatsAppBtn_Click(object sender, RoutedEventArgs e)
+        {
+            await Launcher.LaunchUriAsync(new Uri($"whatsapp://send?text={FeedEntries[SelectedFeedEntryI].Link}"));
+        }
+
+        private async void ShareTgBtn_Click(object sender, RoutedEventArgs e)
+        {
+            await Launcher.LaunchUriAsync(new Uri($"tg://msg?text={FeedEntries[SelectedFeedEntryI].Link}"));
         }
     }
 }
